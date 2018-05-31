@@ -1,0 +1,209 @@
+;****************************************************************
+;
+; Copyright (c) 2001 - 2003
+; Bruker BioSpin MRI GmbH
+; D-76275 Ettlingen, Germany
+;
+; All Rights Reserved
+; 
+; JM_AIFDCE.ppg
+; Interleaved experiment for acquiring a radial projection-based AIF
+; and a Cartesian multi-slice DCE experiment.  The AIF uses a flow
+; compensated FLASH acquisition with 2D inflow angiography, and the
+; DCE experiment uses the standard FLASH acquisition.
+; derived from FLASH - a gradient echo imaging method
+;
+;****************************************************************
+;
+; d0 - TR padding
+; d1 - T1 padding
+; d2 - T2 padding (or is it t4 padding?)
+; d13 = PVM_RiseTime
+; d14 = PVM_RampTime
+; d8 = CONFIG_amplifier_enable
+
+#include<MRI.include>
+preset off
+
+define delay denab
+;FLASHubc: "denab =  d13 - de"
+"denab = d30 - de"
+define delay d14d10u
+"d14d10u = d14 + 10u"
+define delay d14d2
+"d14d2 = d14 + d2"
+define delay adcinit
+"adcinit = de - depa"
+define delay dur5
+"dur5 = d25 - 10u"
+
+;---------- Define Frequency Lists ------------
+define list<frequency> fq1list = {$ACQ_O1_list} ; o1list = {$ACQ_O1_list}
+define list<frequency> fq2list = {$ACQ_O2_list} ; o2list = {$ACQ_O2_list}
+define list<frequency,DDSB> fq8blist = {$ACQ_O1B_list}
+
+;define loopcounter NDCE = {$NDCESlices}
+define loopcounter NAngles
+"NAngles = l5"
+;define list<gradient> PEsinArray = {$PEsinArray}
+;define list<gradient> PEcosArray = {$PEcosArray}
+
+#include <PrepModulesHead.mod> 
+subr FlowSatinit()
+
+INIT_DEVICES
+
+;---------- Define sin and cos arrays -----------
+lgrad PEsinArray = L[5]
+lgrad PEcosArray = L[5]
+zgrad PEsinArray
+zgrad PEcosArray
+
+"l3 = l1 + ds"
+lgrad r2d<2d> = L[1]
+zgrad r2d
+lgrad r3d<3d> = L[2]
+zgrad r3d
+
+lgrad slice = NSLICES
+zslice
+
+decr,   dgrad r2d
+        lo to decr times DS
+
+        10u recph ph1
+start,  10u
+
+;if(PVM_BlBloodOnOff)
+;{
+;#include <TriggerPerPhaseStep.mod>
+;}
+;#include <blblood.mod>
+
+;#include <TriggerPerPhaseStep.mod>
+;#include <SelSliceIr.mod>
+
+;#include <tagging.mod>
+;----------------------------------start of the main loop ----------
+slice, 	10u fq8b:f1
+
+;#include <TriggerPerSlice.mod>
+;----------------------------------preparation modules -------------
+;#include <FlowSat.mod>
+;subr SatSlices()
+;#include <MagTrans.mod>
+;#include <FatSup.mod>  
+
+10u	TTL2_LOW
+10u	TTL3_HIGH
+
+;========== Start AIF line acquisition ===========
+        30u
+	;----------- Slice Excitation ------------
+        d9                 	grad{(0)|(0)|(t10)}		;slice spoiler
+        d30	fq1list:f1   	grad{(0)|(0)|(t0)} 		;turn on slice select gradient and select the frequency from fqllist
+        d8	gatepulse 1  					;open the transmitter gate
+        p0:sp0:f1   ph0   					;play out excitation pulse, with frequency f1, pulse duration p0, shape sp0, phase ph0
+        d30                	groff 				;turn off all gradients
+
+	;----------- Slice Rephase / Flow compensation ------------
+        d3                 	grad{(0)|(0)|(t1,,no_scale)}	;first lobe of FC gradients
+        d30	fq8blist(receive):f1  groff  			;set read offset frequency (and turn off gradients)
+        d5			grad{PEsinArray(t4,,no_scale)|PEcosArray(t4,,no_scale)|(t2,,no_scale)} ;second lobe of FC gradients
+        d30			groff
+
+	;----------- Start Acquisition for AIF ------------
+        denab REC_ENABLE 	grad{PEsinArray(t5,,no_scale)|PEcosArray(t5,,no_scale)|(0)}	;turn on read gradient and enable receiver
+        ADC_INIT_B(NOPH, ph2)					; initialize receiver
+        aqq	ADC_START					; receive data for the duration aqq (PVM_AcquisitionTime)
+        d6			grad{PEsinArray(t9,,no_scale)|PEcosArray(t9,,no_scale)|(0)}	;turn on read spoiler
+        d30			groff
+        d30
+        d8	ADC_END						;close the ADC
+
+	;5u	fq1list.inc					;increment fqlist index (i.e. choose the next slice offset frequency)
+        5u	fq8blist.inc					;increment read offset frequency index
+	5u	islice fq1list.inc				;increment slice index before proceding to the DCE experiment
+
+;========== End AIF line acquisition ===========
+
+10u	TTL2_HIGH
+10u	TTL3_LOW
+
+if(NDCESlices > 0)
+{
+dceslice,  d9	grad{(0)|(0)|(t10)}
+;----------------------------------slice selection------------------	
+; before rfspoil -->	d13 	grad{(0)|(0)|(t0)} fq1:f1
+        d13 	grad{(0)|(0)|(t0)} fq1list:f1 ;newly added
+        d8	gatepulse 1
+	p0:sp0
+	d14d10u	groff
+
+;short TE mode (go back to FLASHubc to see how long TE mode is implemented)
+        ;----------------------slice rephase, read dephase, phase encoding----
+	d10 	grad{(t13)|r2d(t3)|(t11)+r3d(t12)}
+	d14d2	groff
+
+;----------------------------------frequency encoding---------------
+        denab grad{(t14)|(0)|(0)} 
+	ADC_INIT_B(NOPH, ph2)  ;ph1 is used (see recph)
+        aqq	ADC_START
+	
+;----------------------------------read spoiler + phase encoding----
+        d11     grad{(t9)|r2d(t15)|r3d(t16)} ; 2nd and 3rd dims
+	d12     grad{(t9)| (0) | (0) }
+	d13	groff
+	d30	ADC_END
+
+;----------------------------------slice and movie loop---------------	
+#include <FlowSatinc.mod>
+if(NI > 1)
+{
+; before RFspoil-->	2.5u islice
+	2.5u islice fq1list.inc	;newly added
+        lo to dceslice times NDCESlices ;go to next DCE slice (=NSLICES-1?)
+}
+}
+	;d20
+	d0		; Added here. different from FLASHubc approach
+
+;----------------------------------rf spoiling phase advance---------
+	10u fq2list:f1		;phase advance - start
+	10up:f1
+	d19
+	10u fq1list:f1
+	10up:f1 fq2list.inc	;phase advance - end
+
+;----------------------------------averaging loop-------------------
+if(NA > 1)
+{
+	2.5u ipp1 ipp2
+        2.5u recph ph1
+	lo to start times NA
+        2.5u rpp1 rpp2
+}
+	igrad PEsinArray
+	igrad PEcosArray
+
+;----------------------------------2d loop--------------------------
+	igrad r2d
+	lo to start times l3
+        "l3=l1"
+;----------------------------------3d loop--------------------------
+	igrad r3d
+	lo to start times l2
+        2.5u
+
+        lo to start times NAE
+        2.5u
+#include <Evolution.mod>
+        2.5u
+        lo to start times NR
+SETUP_GOTO(start)
+
+exit
+
+ph0 = 0 
+ph1 = 0 2 1 3
+ph2 = 0 2 3 1
