@@ -379,8 +379,10 @@ void SetGradientParameters( void )
                    (-PVM_ExSliceFC1Gradient),	/* t1 */
                    (PVM_ExSliceFC2Gradient),	/* t2 */
                    PVM_2dPhaseGradientFLASH,	/* t3, coming from FLASHubc*/ 
-                   (-PVM_ReadDephaseGradient),	/* t4 */
-                   PVM_ReadGradient,		/* t5 */
+//                   (-PVM_ReadDephaseGradient),/* t4 */
+                   (-PVM_ReadDephaseGradientAIF),/* t4 */
+//                   PVM_ReadGradient,		/* t5 */
+                   PVM_ReadGradientAIF,		/* t5 */
                    (-PVM_2dPhaseGradient),	/* t6 */
                    (PVM_2dPhaseFC1Gradient),	/* t7 */
                    (-PVM_2dPhaseFC2Gradient),	/* t8 */
@@ -388,8 +390,10 @@ void SetGradientParameters( void )
                    SliceSpoilerStrength,	/* t10, same as FLASHubc t9 */
 		   (-PVM_ExSliceRephaseGradient),/* t11, coming from FLASHubc t1 */
                    (-PVM_3dPhaseGradient),	/* t12, coming from FLASHubc t4 */
-                   (-PVM_ReadDephaseGradientFLASH), /* t13, same as FLASHubc t2 */
-                   PVM_ReadGradientFLASH,	/* t14, coming from FLASHubc t5 */
+//                   (-PVM_ReadDephaseGradientFLASH), /* t13, same as FLASHubc t2 */
+                   (-PVM_ReadDephaseGradient), /* t13, same as FLASHubc t2 */
+//                   PVM_ReadGradientFLASH,	/* t14, coming from FLASHubc t5 */
+                   PVM_ReadGradient,	/* t14, coming from FLASHubc t5 */
 		   (-PVM_2dPhaseGradientFLASH),	/* t15, coming from FLASHubc t7, same as -t3 */
                    PVM_3dPhaseGradient		/* t16, coming from FLASHubc t8, same as -t12 */
                  );

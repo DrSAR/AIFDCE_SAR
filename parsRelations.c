@@ -390,11 +390,14 @@ int LocalFlowCompGradientConstrain(void)
   PVM_ExSliceFC2Gradient = slicetrim[1];
 
   readgrad = 100.0*PVM_MinFov[0]/(PVM_Fov[0]*AIF_FoV_factor);
-  PVM_ReadGradient = readgrad;
-  PVM_ReadDephaseGradient = MRT_ReadDephaseGrad( 
+  //PVM_ReadGradient = readgrad;
+  PVM_ReadGradientAIF = readgrad;
+  /*PVM_ReadDephaseGradient = MRT_ReadDephaseGrad( 
   			ReadGradRatio,
-			PVM_ReadGradient );
-  
+			PVM_ReadGradient ); */
+  PVM_ReadDephaseGradientAIF = MRT_ReadDephaseGrad( 
+  			ReadGradRatio,
+			PVM_ReadGradientAIF );  
   DB_MSG(("<--LocalFlowCompGradientConstrain\n"));
 
   return constrain_violated;
@@ -891,16 +894,25 @@ void LocalGradientStrengthRels( void )
   /* FREQUENCY ENCODING GRADIENT */
   if(dim >0)
   {
-  PVM_ReadGradientFLASH = 
+  /*PVM_ReadGradientFLASH = 
     MRT_ReadGrad( PVM_EffSWh,
 		  PVM_Fov[0],
-		  PVM_GradCalConst );
-  PVM_ReadDephaseGradientFLASH = 
+		  PVM_GradCalConst );*/
+  PVM_ReadGradient = 
+    MRT_ReadGrad( PVM_EffSWh,
+		  PVM_Fov[0],
+		  PVM_GradCalConst );  
+  /*PVM_ReadDephaseGradientFLASH = 
     MRT_ReadDephaseGrad( ReadGradRatioFLASH,
-			 PVM_ReadGradientFLASH );
+			 PVM_ReadGradientFLASH );*/
+  PVM_ReadDephaseGradient = 
+    MRT_ReadDephaseGrad( ReadGradRatio,
+			 PVM_ReadGradient );
+
   }
   else
-    PVM_ReadGradientFLASH = PVM_ReadDephaseGradientFLASH = 0.0;
+    //PVM_ReadGradientFLASH = PVM_ReadDephaseGradientFLASH = 0.0;
+    PVM_ReadGradient = PVM_ReadDephaseGradient = 0.0;
 
 
   /* SLICE SELECTION GRADIENT */ 

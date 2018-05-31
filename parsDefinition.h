@@ -147,8 +147,10 @@ double parameter RFSpoilerlist[];
 double parameter RFSpoilerdelay;
 double parameter readDephIntegFLASH;
 double parameter ReadGradRatioFLASH;
-double parameter PVM_ReadGradientFLASH;
-double parameter PVM_ReadDephaseGradientFLASH;
+//double parameter PVM_ReadGradientFLASH;
+double parameter PVM_ReadGradientAIF;
+//double parameter PVM_ReadDephaseGradientFLASH;
+double parameter PVM_ReadDephaseGradientAIF;
 double parameter PVM_2dPhaseGradientFLASH;
 int parameter NDCESlices;
 
